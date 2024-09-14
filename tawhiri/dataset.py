@@ -61,7 +61,7 @@ class Dataset(object):
     #: The dimensions of the dataset
     #:
     #: Note ``len(axes[i]) == shape[i]``.
-    shape = (65, 47, 3, 361, 720)
+    shape = (2, 13, 4, 721, 1440)
 
     # TODO: use the other levels too?
     # {10, 80, 100}m heightAboveGround (u, v)
@@ -77,6 +77,14 @@ class Dataset(object):
     #: The pressure levels contained in a "pgrb2bf" file from the NOAA
     pressures_pgrb2bf = [1, 2, 3, 5, 7, 125, 175, 225, 275, 325, 375, 425,
                          475, 525, 575, 625, 675, 725, 775, 825, 875]
+    
+    # ECMWF 
+    # Pressure levels:
+    #  1000, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300, 250, 200, 150, 100, 70, 50, 30, 20, 10, 7, 5, 3, 2, 1 hPa
+    # Model levels: 
+    #  1 to 137
+    # Open data levels:
+    pressures_ecmwf = [1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150, 100, 50]
 
     _axes_type = namedtuple("axes",
                 ("hour", "pressure", "variable", "latitude", "longitude"))
@@ -87,11 +95,11 @@ class Dataset(object):
     #: For example, ``axes.pressure[4]`` is ``900`` - points in
     #: cells ``dataset.array[a][4][b][c][d]`` correspond to data at 900mb.
     axes = _axes_type(
-        range(0, 192 + 3, 3),
-        sorted(pressures_pgrb2f + pressures_pgrb2bf, reverse=True),
-        ["height", "wind_u", "wind_v"],
-        [x/2.0 for x in range(-180, 180 + 1)],
-        [x/2.0 for x in range(0, 720)]
+        range(0, 6, 3),                              # hour
+        sorted(pressures_ecmwf, reverse=True),       # pressure
+        ["height", "wind_u", "wind_v", "wind_w"],    # vars
+        [x/4.0 for x in range(-360, 360 + 1)],       # lat
+        [x/4.0 for x in range(-720, 720)]            # lon
     )
 
     _listdir_type = namedtuple("dataset_in_row",

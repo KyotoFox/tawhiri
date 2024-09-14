@@ -44,6 +44,7 @@ from .warnings cimport WarningCounts
 DEF VAR_A = 0
 DEF VAR_U = 1
 DEF VAR_V = 2
+DEF VAR_W = 3
 
 
 ctypedef float[:, :, :, :, :] dataset
@@ -79,7 +80,7 @@ def make_interpolator(dataset, WarningCounts warnings):
     if warnings is None:
         raise TypeError("Warnings must not be None")
 
-    data = MagicMemoryView(dataset.array, (65, 47, 3, 361, 720), b"f")
+    data = MagicMemoryView(dataset.array, (2, 13, 4, 721, 1440), b"f")
 
     def f(hour, lat, lng, alt):
         return get_wind(data, warnings, hour, lat, lng, alt)
@@ -99,6 +100,8 @@ cdef object get_wind(dataset ds, WarningCounts warnings,
     Returned coordinates are interpolated from the surrounding grid
     points in time, latitude, longitude and altitude.
     """
+
+    #print("Wind at hour {}, {},{} @ {}".format(hour, lat, lng, alt))
 
     cdef Lerp3[8] lerps
     cdef long altidx
@@ -149,10 +152,10 @@ cdef long pick3(double hour, double lat, double lng, Lerp3[8] out) except -1:
     # However, the longitude does wrap around, so we tell `pick` that the
     # longitude axis is one larger than it is (so that it can "choose" the
     # 721st point/the 360 degrees point), then wrap it afterwards.
-    pick(0, 3, 65, hour, "hour", lhour)
-    pick(-90, 0.5, 361, lat, "lat", llat)
-    pick(0, 0.5, 720 + 1, lng, "lng", llng)
-    if llng[1].index == 720:
+    pick(0, 3, 2, hour, "hour", lhour)
+    pick(-90, 0.25, 721, lat, "lat", llat)
+    pick(0, 0.25, 1440 + 1, lng, "lng", llng)
+    if llng[1].index == 361:
         llng[1].index = 0
 
     cdef long i = 0
@@ -182,7 +185,7 @@ cdef long search(dataset ds, Lerp3[8] lerps, double target):
     cdef long lower, upper, mid
     cdef double test
     
-    lower, upper = 0, 45
+    lower, upper = 0, 11
 
     while lower < upper:
         mid = (lower + upper + 1) / 2
