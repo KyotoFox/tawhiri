@@ -80,7 +80,7 @@ def make_interpolator(dataset, WarningCounts warnings):
     if warnings is None:
         raise TypeError("Warnings must not be None")
 
-    data = MagicMemoryView(dataset.array, (2, 13, 4, 721, 1440), b"f")
+    data = MagicMemoryView(dataset.array, (4, 47, 4, 721, 1440), b"f")
 
     def f(hour, lat, lng, alt):
         return get_wind(data, warnings, hour, lat, lng, alt)
@@ -146,15 +146,18 @@ cdef long pick(double left, double step, long n, double value,
 cdef long pick3(double hour, double lat, double lng, Lerp3[8] out) except -1:
     cdef Lerp1[2] lhour, llat, llng
 
+    print(f"pick3: {hour}, {lat}, {lng}")
+
     # the dimensions of the lat/lon axes are 361 and 720
     # (The latitude axis includes its two endpoints; the longitude only
     # includes the lower endpoint)
     # However, the longitude does wrap around, so we tell `pick` that the
     # longitude axis is one larger than it is (so that it can "choose" the
     # 721st point/the 360 degrees point), then wrap it afterwards.
-    pick(0, 3, 2, hour, "hour", lhour)
+    pick(0, 1, 4, hour, "hour", lhour)
     pick(-90, 0.25, 721, lat, "lat", llat)
-    pick(0, 0.25, 1440 + 1, lng, "lng", llng)
+    pick(-180, 0.25, 1440 + 1, lng, "lng", llng)
+    #pick(0, 0.25, 1440 + 1, lng, "lng", llng)
     if llng[1].index == 361:
         llng[1].index = 0
 
@@ -176,6 +179,7 @@ cdef double interp3(dataset ds, Lerp3[8] lerps, long variable, long level):
     for i in range(8):
         lerp = lerps[i]
         v = ds[lerp.hour, level, variable, lerp.lat, lerp.lng]
+        print(f"{lerp.hour},{level},{variable},{lerp.lat},{lerp.lng} = {v}")
         r += v * lerp.lerp
 
     return r
@@ -185,7 +189,7 @@ cdef long search(dataset ds, Lerp3[8] lerps, double target):
     cdef long lower, upper, mid
     cdef double test
     
-    lower, upper = 0, 11
+    lower, upper = 0, 45
 
     while lower < upper:
         mid = (lower + upper + 1) / 2
