@@ -18,4 +18,11 @@ Jinja2==2.11.3
 markupsafe==2.0.1
 
 # Ourselves
--e .
+#-e .
+
+# Our dependencies
+magicmemoryview
+ruaumoko
+Flask-Script
+strict-rfc3339
+gunicorn
