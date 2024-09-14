@@ -44,6 +44,7 @@ STANDARD_FORMAT = "json"
 
 # Util functions ##############################################################
 def ruaumoko_ds():
+    return None
     if not hasattr("ruaumoko_ds", "once"):
         ds_loc = app.config.get('ELEVATION_DATASET', ElevationDataset.default_location)
         ruaumoko_ds.once = ElevationDataset(ds_loc)
