@@ -170,6 +170,7 @@ def make_linear_model(models):
         for model in models:
             d = model(t, lat, lng, alt)
             dlat, dlng, dalt = dlat + d[0], dlng + d[1], dalt + d[2]
+        print(f"At time {t}: {lat},{lng} @ {alt} = {dlat},{dlng} @ {dalt}")
         return dlat, dlng, dalt
     return linear_model
 
