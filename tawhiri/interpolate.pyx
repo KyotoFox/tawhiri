@@ -105,7 +105,7 @@ cdef object get_wind(dataset ds, WarningCounts warnings,
 
     cdef Lerp3[8] lerps
     cdef long altidx
-    cdef double lower, upper, u, v
+    cdef double lower, upper, u, v, w
 
     pick3(hour, lat, lng, lerps)
 
@@ -124,8 +124,9 @@ cdef object get_wind(dataset ds, WarningCounts warnings,
 
     u = interp4(ds, lerps, alt_lerp, VAR_U)
     v = interp4(ds, lerps, alt_lerp, VAR_V)
+    w = interp4(ds, lerps, alt_lerp, VAR_W)
 
-    return u, v, 
+    return u, v, w,
 
 cdef long pick(double left, double step, long n, double value,
                object variable_name, Lerp1[2] out) except -1:

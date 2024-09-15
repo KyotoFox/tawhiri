@@ -82,11 +82,11 @@ def make_wind_velocity(dataset, warningcounts):
     dataset_epoch = calendar.timegm(dataset.ds_time.timetuple())
     def wind_velocity(t, lat, lng, alt):
         t -= dataset_epoch
-        u, v = get_wind(t / 3600.0, lat, lng, alt)
+        u, v, w = get_wind(t / 3600.0, lat, lng, alt)
         R = 6371009 + alt
         dlat = _180_PI * v / R
         dlng = _180_PI * u / (R * math.cos(lat * _PI_180))
-        return dlat, dlng, 0.0
+        return dlat, dlng, w
     return wind_velocity
 
 
