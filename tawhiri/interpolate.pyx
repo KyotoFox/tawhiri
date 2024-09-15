@@ -137,7 +137,12 @@ cdef long pick(double left, double step, long n, double value,
     a = (value - left) / step
     b = <long> a
     if b < 0 or b >= n - 1:
-        raise RangeError(variable_name, value)
+        if variable_name == "hour":
+            out[0] = Lerp1(0, 0)
+            out[1] = Lerp1(0, 0)
+            return 0
+        else:
+            raise RangeError(variable_name, value)
     l = a - b
 
     out[0] = Lerp1(b, 1 - l)
