@@ -22,6 +22,7 @@ functions to combine models and termination conditions.
 
 import calendar
 import math
+import pyproj
 
 from . import interpolate
 
@@ -29,6 +30,17 @@ from . import interpolate
 _PI_180 = math.pi / 180.0
 _180_PI = 180.0 / math.pi
 
+crs_MEPS = pyproj.CRS.from_cf(
+    {
+        "grid_mapping_name": "lambert_conformal_conic",
+        "standard_parallel": [63.3, 63.3],
+        "longitude_of_central_meridian": 15.0,
+        "latitude_of_projection_origin": 63.3,
+        "earth_radius": 6371000.0,
+    }
+)
+
+proj_MEPS = pyproj.Proj.from_crs(4326, crs_MEPS, always_xy=True)
 
 ## Up/Down Models #############################################################
 
@@ -82,7 +94,15 @@ def make_wind_velocity(dataset, warningcounts):
     dataset_epoch = calendar.timegm(dataset.ds_time.timetuple())
     def wind_velocity(t, lat, lng, alt):
         t -= dataset_epoch
-        u, v, w = get_wind(t / 3600.0, lat, lng, alt)
+
+        if True: # MEPS
+            # Reproject coordinates
+            rlng,rlat = proj_MEPS.transform(lng, lat)
+        else:
+            rlat = lat
+            rlng = lng
+
+        u, v, w = get_wind(t / 3600.0, rlat, rlng, alt)
         R = 6371009 + alt # What if we use WGS84? 6378137
         dlat = _180_PI * v / R
         dlng = _180_PI * u / (R * math.cos(lat * _PI_180))

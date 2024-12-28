@@ -81,9 +81,11 @@ def make_interpolator(dataset, WarningCounts warnings):
         raise TypeError("Warnings must not be None")
 
     # GFS
-    data = MagicMemoryView(dataset.array, (2, 49, 4, 721, 1440), b"f")
+    #data = MagicMemoryView(dataset.array, (2, 49, 4, 721, 1440), b"f")
     # ECMWF
     #data = MagicMemoryView(dataset.array, (3, 13, 4, 721, 1440), b"f")
+    # MEPS
+    data = MagicMemoryView(dataset.array, (4, 65, 4, 88, 28), b"f")
 
     def f(hour, lat, lng, alt):
         return get_wind(data, warnings, hour, lat, lng, alt)
@@ -164,15 +166,21 @@ cdef long pick3(double hour, double lat, double lng, Lerp3[8] out) except -1:
     # longitude axis is one larger than it is (so that it can "choose" the
     # 721st point/the 360 degrees point), then wrap it afterwards.
     # GFS
-    pick(0, 1, 2, hour, "hour", lhour)
+    #pick(0, 1, 2, hour, "hour", lhour)
     # ECMWF
     #pick(0, 3, 3, hour, "hour", lhour)
+    # MEPS
+    pick(0, 1, 4, hour, "hour", lhour)
     
-    pick(-90, 0.25, 721, lat, "lat", llat)
-    pick(-180, 0.25, 1440 + 1, lng, "lng", llng)
+    #pick(-90, 0.25, 721, lat, "lat", llat)
+    #pick(-180, 0.25, 1440 + 1, lng, "lng", llng)
     #pick(0, 0.25, 1440 + 1, lng, "lng", llng)
     if llng[1].index == 361:
-        llng[1].index = 0
+        raise Exception("Edge case")
+        #llng[1].index = 0
+
+    pick(-472517.90625, 2500.0, 28, lat, "lat", llat)
+    pick(-565084.0625, 2500.0, 88, lng, "lng", llng)
 
     cdef long i = 0
 
@@ -203,9 +211,11 @@ cdef long search(dataset ds, Lerp3[8] lerps, double target):
     cdef double test
     
     # GFS
-    lower, upper = 0, 47
+    #lower, upper = 0, 47
     # ECMWF
     #lower, upper = 0, 11
+    # MEPS
+    lower, upper = 0, 63
 
     while lower < upper:
         mid = (lower + upper + 1) / 2

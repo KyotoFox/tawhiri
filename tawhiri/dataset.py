@@ -62,9 +62,11 @@ class Dataset(object):
     #:
     #: Note ``len(axes[i]) == shape[i]``.
     # GFS
-    shape = (2, 49, 4, 721, 1440)
+    #shape = (2, 49, 4, 721, 1440)
     # ECMWF
     #shape = (3, 13, 4, 721, 1440)
+    # MEPS
+    shape = (4, 65, 4, 88, 28)
 
     # TODO: use the other levels too?
     # {10, 80, 100}m heightAboveGround (u, v)
@@ -90,6 +92,10 @@ class Dataset(object):
     # Open data levels:
     pressures_ecmwf = [1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150, 100, 50]
 
+    # MEPS uses model levels, where the pressure is different for each grid point,
+    # but we don't really care about the pressure, so for MEPS, we don't really look at the value of the pressure level
+    pressures_meps = range(0, 65)
+
     _axes_type = namedtuple("axes",
                 ("hour", "pressure", "variable", "latitude", "longitude"))
 
@@ -99,13 +105,13 @@ class Dataset(object):
     #: For example, ``axes.pressure[4]`` is ``900`` - points in
     #: cells ``dataset.array[a][4][b][c][d]`` correspond to data at 900mb.
     # GFS
-    axes = _axes_type(
-        range(0, 2, 1),                              # hour
-        sorted(pressures_gfs, reverse=True),         # pressure
-        ["height", "wind_u", "wind_v", "wind_w"],    # vars
-        [x/4.0 for x in range(-360, 360 + 1)],       # lat
-        [x/4.0 for x in range(-720, 720)]            # lon
-    )
+    # axes = _axes_type(
+    #     range(0, 2, 1),                              # hour
+    #     sorted(pressures_gfs, reverse=True),         # pressure
+    #     ["height", "wind_u", "wind_v", "wind_w"],    # vars
+    #     [x/4.0 for x in range(-360, 360 + 1)],       # lat
+    #     [x/4.0 for x in range(-720, 720)]            # lon
+    # )
 
     # ECMWF SCDA
     # axes = _axes_type(
@@ -115,6 +121,16 @@ class Dataset(object):
     #     [x/4.0 for x in range(-360, 360 + 1)],       # lat
     #     [x/4.0 for x in range(-720, 720)]            # lon
     # )
+
+    # MEPS
+    axes = _axes_type(
+        range(0, 4, 1),                              # hour
+        sorted(pressures_meps, reverse=True),         # pressure
+        ["height", "wind_u", "wind_v", "wind_w"],    # vars
+        [(-472517.90625 + i * 2500.0) for i in range(0, 28)], # lat
+        [(-565084.0625 + i * 2500.0) for i in range(0, 88)]   # lon
+    )
+
 
     _listdir_type = namedtuple("dataset_in_row",
                 ("ds_time", "suffix", "filename", "path"))
