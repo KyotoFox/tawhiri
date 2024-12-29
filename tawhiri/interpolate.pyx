@@ -106,8 +106,6 @@ cdef object get_wind(dataset ds, WarningCounts warnings,
     points in time, latitude, longitude and altitude.
     """
 
-    #print("Wind at hour {}, {},{} @ {}".format(hour, lat, lng, alt))
-
     cdef Lerp3[8] lerps
     cdef long altidx
     cdef double lower, upper, u, v, w
@@ -130,6 +128,8 @@ cdef object get_wind(dataset ds, WarningCounts warnings,
     u = interp4(ds, lerps, alt_lerp, VAR_U)
     v = interp4(ds, lerps, alt_lerp, VAR_V)
     w = interp4(ds, lerps, alt_lerp, VAR_W)
+
+    print("Wind at hour {}, {},{} @ {} (idx {}) = {},{},{}".format(hour, lat, lng, alt, alt_lerp.index, u, v, w))
 
     return u, v, w,
 
@@ -200,7 +200,7 @@ cdef double interp3(dataset ds, Lerp3[8] lerps, long variable, long level):
     for i in range(8):
         lerp = lerps[i]
         v = ds[lerp.hour, level, variable, lerp.lat, lerp.lng]
-        print(f"{lerp.hour},{level},{variable},{lerp.lat},{lerp.lng} = {v}")
+        #print(f"{lerp.hour},{level},{variable},{lerp.lat},{lerp.lng} = {v}")
         r += v * lerp.lerp
 
     return r
@@ -220,6 +220,7 @@ cdef long search(dataset ds, Lerp3[8] lerps, double target):
     while lower < upper:
         mid = (lower + upper + 1) / 2
         test = interp3(ds, lerps, VAR_A, mid)
+        print(f"search for {target}: {lower} / {upper} = {test}")
         if target <= test:
             upper = mid - 1
         else:

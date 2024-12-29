@@ -103,6 +103,9 @@ def make_wind_velocity(dataset, warningcounts):
             rlng = lng
 
         u, v, w = get_wind(t / 3600.0, rlat, rlng, alt)
+
+        print(f"Wind at {lat},{lng} ({rlat},{rlng}) @ {alt} = {u},{v},{w}")
+
         R = 6371009 + alt # What if we use WGS84? 6378137
         dlat = _180_PI * v / R
         dlng = _180_PI * u / (R * math.cos(lat * _PI_180))

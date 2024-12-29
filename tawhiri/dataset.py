@@ -66,7 +66,7 @@ class Dataset(object):
     # ECMWF
     #shape = (3, 13, 4, 721, 1440)
     # MEPS
-    shape = (4, 65, 4, 88, 28)
+    shape = (4, 65, 4, 28, 88)
 
     # TODO: use the other levels too?
     # {10, 80, 100}m heightAboveGround (u, v)
@@ -125,7 +125,7 @@ class Dataset(object):
     # MEPS
     axes = _axes_type(
         range(0, 4, 1),                              # hour
-        sorted(pressures_meps, reverse=True),         # pressure
+        sorted(pressures_meps, reverse=False),         # pressure
         ["height", "wind_u", "wind_v", "wind_w"],    # vars
         [(-472517.90625 + i * 2500.0) for i in range(0, 28)], # lat
         [(-565084.0625 + i * 2500.0) for i in range(0, 88)]   # lon

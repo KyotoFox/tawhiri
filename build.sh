@@ -1,1 +1,1 @@
-docker build . -t tawhiri-single
+docker build . -t tawhiri-updated

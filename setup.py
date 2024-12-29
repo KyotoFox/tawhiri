@@ -53,7 +53,6 @@ setup(
     test_suite='nose.collector',
     tests_require=['nose', 'mock', 'Flask-Testing'],
     install_requires=[
-        "magicmemoryview",
         "ruaumoko",
         "Flask",
         "Flask-Script",

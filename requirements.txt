@@ -6,7 +6,7 @@ eventlet
 gevent
 
 # Documentation
-sphinx
+sphinx==5.1.1
 docutils
 
 # Date parsing
@@ -21,8 +21,9 @@ markupsafe==2.0.1
 #-e .
 
 # Our dependencies
-magicmemoryview
-ruaumoko
+#magicmemoryview
+#ruaumoko
 Flask-Script
 strict-rfc3339
 gunicorn
+pyproj
