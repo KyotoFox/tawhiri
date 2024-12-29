@@ -42,6 +42,8 @@ crs_MEPS = pyproj.CRS.from_cf(
 
 proj_MEPS = pyproj.Proj.from_crs(4326, crs_MEPS, always_xy=True)
 
+geodesic = pyproj.Geod(ellps='WGS84')
+
 ## Up/Down Models #############################################################
 
 
@@ -84,6 +86,32 @@ def make_drag_descent(sea_level_descent_rate):
 
 ## Sideways Models ############################################################
 
+def calculate_bearing_and_distance(north_meters, east_meters):
+    """
+    Convert north/east distances into bearing and total distance.
+    
+    Parameters:
+    north_meters (float): Distance to move north in meters
+    east_meters (float): Distance to move east in meters
+    
+    Returns:
+    tuple: (bearing_degrees, total_distance_meters)
+    """
+    # Calculate bearing using arctangent
+    # atan2 handles all quadrants correctly
+    bearing_radians = math.atan2(east_meters, north_meters)
+    
+    # Convert to degrees
+    bearing_degrees = math.degrees(bearing_radians)
+    
+    # Ensure bearing is positive (0-360 degrees)
+    if bearing_degrees < 0:
+        bearing_degrees += 360
+        
+    # Calculate total distance using Pythagorean theorem
+    total_distance = math.sqrt(north_meters**2 + east_meters**2)
+    
+    return bearing_degrees, total_distance
 
 def make_wind_velocity(dataset, warningcounts):
     """Return a wind-velocity model, which gives lateral movement at
@@ -106,10 +134,20 @@ def make_wind_velocity(dataset, warningcounts):
 
         print(f"Wind at {lat},{lng} ({rlat},{rlng}) @ {alt} = {u},{v},{w}")
 
-        R = 6371009 + alt # What if we use WGS84? 6378137
-        dlat = _180_PI * v / R
-        dlng = _180_PI * u / (R * math.cos(lat * _PI_180))
+        # R = 6371009 + alt # What if we use WGS84? 6378137
+        # dlat = _180_PI * v / R
+        # dlng = _180_PI * u / (R * math.cos(lat * _PI_180))
+        # return dlat, dlng, w
+        
+        # Use pyproj that will use the proper WGS84 ellipsoid
+        bearing_degrees, distance_meters = calculate_bearing_and_distance(v, u)
+        nlng, nlat, back_az = geodesic.fwd(lng, lat, bearing_degrees, distance_meters)
+        
+        dlng = nlng - lng
+        dlat = nlat - lat
+
         return dlat, dlng, w
+    
     return wind_velocity
 
 
@@ -127,7 +165,7 @@ def make_reverse_wind_velocity(dataset, warningcounts):
         # Reverse the sign of the u & v wind components
         u = -1 * u
         v = -1 * v
-        R = 6371009 + alt
+        R = 6371009 + alt # TODO: Use pyproj instead
         dlat = _180_PI * v / R
         dlng = _180_PI * u / (R * math.cos(lat * _PI_180))
         return dlat, dlng, 0.0
