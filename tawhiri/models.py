@@ -126,11 +126,15 @@ def make_wind_velocity(dataset, warningcounts):
         if True: # MEPS
             # Reproject coordinates
             rlng,rlat = proj_MEPS.transform(lng, lat)
+            ralt = alt-400 # TODO: We need to add the ground level height to get the right altitude in MEPS
+            if ralt < 0:
+                ralt = 0
         else:
             rlat = lat
             rlng = lng
+            ralt = alt
 
-        u, v, w = get_wind(t / 3600.0, rlat, rlng, alt)
+        u, v, w = get_wind(t / 3600.0, rlat, rlng, ralt)
 
         print(f"Wind at {lat},{lng} ({rlat},{rlng}) @ {alt} = {u},{v},{w}")
 
@@ -146,6 +150,7 @@ def make_wind_velocity(dataset, warningcounts):
         dlng = nlng - lng
         dlat = nlat - lat
 
+        #return dlat, dlng, 0.0
         return dlat, dlng, w
     
     return wind_velocity
