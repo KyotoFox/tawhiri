@@ -31,6 +31,7 @@ from tawhiri.warnings import WarningCounts
 from tawhiri.csvformatter import format_csv, fix_data_longitudes
 from tawhiri.kmlformatter import format_kml
 from ruaumoko import Dataset as ElevationDataset
+from pathlib import Path
 
 app = Flask(__name__)
 
@@ -184,6 +185,7 @@ def parse_request(data):
         raise RequestException("Unknown profile '%s'." % req['profile'])
 
     # Dataset
+    req['model'] = _extract_parameter(data, "model", str, "gfs")
     req['dataset'] = _extract_parameter(data, "dataset", _rfc3339_to_timestamp,
                                         LATEST_DATASET_KEYWORD)
 
@@ -235,7 +237,8 @@ def parse_request_datasetcheck(data):
     warningcounts = WarningCounts()
 
     # Find wind data location
-    ds_dir = app.config.get('WIND_DATASET_DIR', WindDataset.DEFAULT_DIRECTORY)
+    ds_dir_base = app.config.get('WIND_DATASET_DIR', WindDataset.DEFAULT_DIRECTORY)
+    ds_dir = Path(ds_dir_base) / req["model"]
 
     # Dataset
     try:
@@ -293,7 +296,8 @@ def run_prediction(req):
     warningcounts = WarningCounts()
 
     # Find wind data location
-    ds_dir = app.config.get('WIND_DATASET_DIR', WindDataset.DEFAULT_DIRECTORY)
+    ds_dir_base = app.config.get('WIND_DATASET_DIR', WindDataset.DEFAULT_DIRECTORY)
+    ds_dir = Path(ds_dir_base) / req["model"]
 
     # Dataset
     try:
@@ -403,7 +407,8 @@ def get_wind(req):
     }
 
     # Find wind data location
-    ds_dir = app.config.get('WIND_DATASET_DIR', WindDataset.DEFAULT_DIRECTORY)
+    ds_dir_base = app.config.get('WIND_DATASET_DIR', WindDataset.DEFAULT_DIRECTORY)
+    ds_dir = Path(ds_dir_base) / req["model"]
 
     # Dataset
     try:
@@ -467,6 +472,7 @@ def main_wind():
     req = {
         'dataset': LATEST_DATASET_KEYWORD
     }
+    req['model'] = _extract_parameter(request.args, "model", str, "gfs")
     req['time'] = _extract_parameter(request.args, "time", float, 0) # Unix timestamp
     req['alt'] = _extract_parameter(request.args, "alt", float, 0)
     req['lat'] = _extract_parameter(request.args, "lat", float, validator=lambda x: -90 <= x <= 90)
