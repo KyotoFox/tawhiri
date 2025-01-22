@@ -129,7 +129,7 @@ cdef object get_wind(dataset ds, WarningCounts warnings,
     v = interp4(ds, lerps, alt_lerp, VAR_V)
     w = interp4(ds, lerps, alt_lerp, VAR_W)
 
-    print("Wind at hour {}, {},{} @ {} (idx {}) = {},{},{}".format(hour, lat, lng, alt, alt_lerp.index, u, v, w))
+    print("Wind at hour {}, {},{} @ {} (idx {}, {}/{}={}) = {},{},{}".format(hour, lat, lng, alt, alt_lerp.index, lower, upper, lerp, u, v, w))
 
     return u, v, w,
 
