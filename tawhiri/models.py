@@ -113,6 +113,23 @@ def calculate_bearing_and_distance(north_meters, east_meters):
     
     return bearing_degrees, total_distance
 
+def get_wind_direct(dataset, warningcounts, t, lat, lng, alt):
+    get_wind = interpolate.make_interpolator(dataset, warningcounts)
+    dataset_epoch = calendar.timegm(dataset.ds_time.timetuple())
+
+    t -= dataset_epoch
+
+    # Reproject coordinates
+    rlng,rlat = proj_MEPS.transform(lng, lat)
+    ralt = alt # TODO: We need to add the ground level height to get the right altitude in MEPS
+    if ralt < 0:
+        ralt = 0
+
+    u, v, w = get_wind(t / 3600.0, rlat, rlng, ralt)
+
+    return u,v,w
+
+
 def make_wind_velocity(dataset, warningcounts):
     """Return a wind-velocity model, which gives lateral movement at
        the wind velocity for the current time, latitude, longitude and
@@ -126,7 +143,7 @@ def make_wind_velocity(dataset, warningcounts):
         if True: # MEPS
             # Reproject coordinates
             rlng,rlat = proj_MEPS.transform(lng, lat)
-            ralt = alt-400 # TODO: We need to add the ground level height to get the right altitude in MEPS
+            ralt = alt # TODO: We need to add the ground level height to get the right altitude in MEPS
             if ralt < 0:
                 ralt = 0
         else:
@@ -137,7 +154,7 @@ def make_wind_velocity(dataset, warningcounts):
         u, v, w = get_wind(t / 3600.0, rlat, rlng, ralt)
 
         print(f"Wind at {lat},{lng} ({rlat},{rlng}) @ {alt} = {u},{v},{w}")
-
+        
         # R = 6371009 + alt # What if we use WGS84? 6378137
         # dlat = _180_PI * v / R
         # dlng = _180_PI * u / (R * math.cos(lat * _PI_180))

@@ -396,6 +396,37 @@ def _parse_stages(labels, data):
         prediction.append(stage)
     return prediction
 
+def get_wind(req):
+    # Response dict
+    resp = {
+        "request": req,
+    }
+
+    # Find wind data location
+    ds_dir = app.config.get('WIND_DATASET_DIR', WindDataset.DEFAULT_DIRECTORY)
+
+    # Dataset
+    try:
+        if req['dataset'] == LATEST_DATASET_KEYWORD:
+            tawhiri_ds = WindDataset.open_latest(persistent=True, directory=ds_dir)
+        else:
+            tawhiri_ds = WindDataset(datetime.fromtimestamp(req['dataset']), directory=ds_dir)
+    except IOError:
+        raise InvalidDatasetException("No matching dataset found.")
+    except ValueError as e:
+        raise InvalidDatasetException(*e.args)
+
+    # Note that hours and minutes are set to 00 as Tawhiri uses hourly datasets
+    resp['request']['dataset'] = \
+            tawhiri_ds.ds_time.strftime("%Y-%m-%dT%H:00:00Z")
+
+    warningcounts = WarningCounts()
+    u,v,w = models.get_wind_direct(tawhiri_ds, warningcounts, req['time'], req['lat'], req['lon'], req['alt'])
+    resp['u'] = u
+    resp['v'] = v
+    resp['w'] = w
+
+    return resp
 
 # Flask App ###################################################################
 @app.route('/api/v{0}/'.format(API_VERSION), methods=['GET'])
@@ -431,7 +462,18 @@ def main():
     else:
         raise InternalException("Format not supported: " + response["request"]["format"])
 
-
+@app.route('/api/wind/', methods=['GET'])
+def main_wind():
+    req = {
+        'dataset': LATEST_DATASET_KEYWORD
+    }
+    req['time'] = _extract_parameter(request.args, "time", float, 0) # Unix timestamp
+    req['alt'] = _extract_parameter(request.args, "alt", float, 0)
+    req['lat'] = _extract_parameter(request.args, "lat", float, validator=lambda x: -90 <= x <= 90)
+    req['lon'] = _extract_parameter(request.args, "lon", float, validator=lambda x: 0 <= x < 360)
+    
+    response = get_wind(req)
+    return jsonify(response)
 
 @app.route('/api/ruaumoko/', methods=['GET'])
 def main_ruaumoko():
