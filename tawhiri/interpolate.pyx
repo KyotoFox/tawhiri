@@ -39,8 +39,6 @@ memory access.
 from magicmemoryview import MagicMemoryView
 from .warnings cimport WarningCounts
 
-
-# These need to match Dataset.axes.variable
 DEF VAR_A = 0
 DEF VAR_U = 1
 DEF VAR_V = 2
@@ -85,15 +83,31 @@ def make_interpolator(dataset, WarningCounts warnings):
     # ECMWF
     #data = MagicMemoryView(dataset.array, (3, 13, 4, 721, 1440), b"f")
     # MEPS
-    data = MagicMemoryView(dataset.array, (4, 65, 4, 88, 28), b"f")
+    #data = MagicMemoryView(dataset.array, (4, 65, 4, 88, 28), b"f")
+    # Header
+    data = MagicMemoryView(dataset.array, (
+        dataset.header['shape']['hour']['count'], 
+        dataset.header['shape']['levels'], 
+        len(dataset.header['shape']['variables']), 
+        dataset.header['shape']['x']['count'], 
+        dataset.header['shape']['y']['count']), b"f")
+
+    # Grab indexes of variables
+    supported_vars = ['A', 'U', 'V', 'W'] # Matching VAR_A, VAR_U, ...
+    cdef int[4] vars
+    for idx,key in enumerate(supported_vars):
+        if key in dataset.header['shape']['variables']:
+            vars[idx] = dataset.header['shape']['variables'].index(key)
+        else:
+            vars[idx] = -1
 
     def f(hour, lat, lng, alt):
-        return get_wind(data, warnings, hour, lat, lng, alt)
+        return get_wind(data, warnings, vars, hour, lat, lng, alt)
 
     return f
 
 
-cdef object get_wind(dataset ds, WarningCounts warnings,
+cdef object get_wind(dataset ds, WarningCounts warnings, int[4] vars,
                      double hour, double lat, double lng, double alt):
     """
     Return [u, v] wind components for the given position.
@@ -110,11 +124,11 @@ cdef object get_wind(dataset ds, WarningCounts warnings,
     cdef long altidx
     cdef double lower, upper, u, v, w
 
-    pick3(hour, lat, lng, lerps)
+    pick3(ds, hour, lat, lng, lerps)
 
     altidx = search(ds, lerps, alt)
-    lower = interp3(ds, lerps, VAR_A, altidx)
-    upper = interp3(ds, lerps, VAR_A, altidx + 1)
+    lower = interp3(ds, lerps, vars[VAR_A], altidx)
+    upper = interp3(ds, lerps, vars[VAR_A], altidx + 1)
 
     if lower != upper:
         lerp = (upper - alt) / (upper - lower)
@@ -125,9 +139,9 @@ cdef object get_wind(dataset ds, WarningCounts warnings,
 
     cdef Lerp1 alt_lerp = Lerp1(altidx, lerp)
 
-    u = interp4(ds, lerps, alt_lerp, VAR_U)
-    v = interp4(ds, lerps, alt_lerp, VAR_V)
-    w = interp4(ds, lerps, alt_lerp, VAR_W)
+    u = interp4(ds, lerps, alt_lerp, vars[VAR_U])
+    v = interp4(ds, lerps, alt_lerp, vars[VAR_V])
+    w = interp4(ds, lerps, alt_lerp, vars[VAR_W]) if vars[VAR_W] is not -1 else 0
 
     print("Wind at hour {}, {},{} @ {} (idx {}, {}/{}={}) = {},{},{}".format(hour, lat, lng, alt, alt_lerp.index, lower, upper, lerp, u, v, w))
 
@@ -154,7 +168,7 @@ cdef long pick(double left, double step, long n, double value,
     out[1] = Lerp1(b + 1, l)
     return 0
 
-cdef long pick3(double hour, double lat, double lng, Lerp3[8] out) except -1:
+cdef long pick3(dataset ds, double hour, double lat, double lng, Lerp3[8] out) except -1:
     cdef Lerp1[2] lhour, llat, llng
 
     print(f"pick3: {hour}, {lat}, {lng}")
@@ -170,17 +184,21 @@ cdef long pick3(double hour, double lat, double lng, Lerp3[8] out) except -1:
     # ECMWF
     #pick(0, 3, 3, hour, "hour", lhour)
     # MEPS
-    pick(0, 1, 4, hour, "hour", lhour)
+    #pick(0, 1, 4, hour, "hour", lhour)
+    # Header
+    # TODO: ds is actually the float array – We should make a struct or something instead?
+    pick(ds.header['shape']['hour']['min'], ds.header['shape']['hour']['step'], ds.header['shape']['hour']['count'], hour, "hour", lhour)
     
     #pick(-90, 0.25, 721, lat, "lat", llat)
     #pick(-180, 0.25, 1440 + 1, lng, "lng", llng)
     #pick(0, 0.25, 1440 + 1, lng, "lng", llng)
-    if llng[1].index == 361:
-        raise Exception("Edge case")
-        #llng[1].index = 0
+    #if llng[1].index == 361:
+    #    raise Exception("Edge case")
+    #    llng[1].index = 0
+    # TODO: Fix for GFS wraparound
 
-    pick(-472517.90625, 2500.0, 28, lat, "lat", llat)
-    pick(-565084.0625, 2500.0, 88, lng, "lng", llng)
+    pick(ds.header['shape']['y']['min'], ds.header['shape']['y']['step'], ds.header['shape']['y']['count'], lat, "lat", llat)
+    pick(ds.header['shape']['x']['min'], ds.header['shape']['x']['step'], ds.header['shape']['x']['count'], lng, "lng", llng)
 
     cdef long i = 0
 
@@ -216,6 +234,8 @@ cdef long search(dataset ds, Lerp3[8] lerps, double target):
     #lower, upper = 0, 11
     # MEPS
     lower, upper = 0, 63
+    # Header
+    lower, upper = 0, (ds.header['shape']['levels'] - 2)
 
     while lower < upper:
         mid = (lower + upper + 1) / 2

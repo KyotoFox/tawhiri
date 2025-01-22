@@ -1,6 +1,10 @@
-# T&#257;whirim&#257;tea
+# T&#257;whirim&#257;tea 
 
 [![Documentation Status](https://readthedocs.org/projects/tawhiri/badge/?version=latest)](https://readthedocs.org/projects/tawhiri/?badge=latest)
+
+## Fork info
+
+This is a fork of Tawhiri with multi-model support, making it easier to have one instance of Tawhiri that can process prediction from different weather models with differing characteristics (spatial & tempral resolution, different coordinate reference systems, and so on...)
 
 ## Introduction
 

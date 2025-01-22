@@ -37,6 +37,7 @@ import signal
 import operator
 from datetime import datetime
 import logging
+import json
 
 logger = logging.getLogger("tawhiri.dataset")
 
@@ -226,8 +227,16 @@ class Dataset(object):
         :rtype: :class:`Dataset`
         """
 
-        datasets = Dataset.listdir(directory, only_suffices=('', ))
-        latest = sorted(datasets, reverse=True)[0].ds_time
+        datasets = Dataset.listdir(directory, only_suffices=('.tawhiri', ))
+        # print("Found datasets:")
+        # for set in datasets:
+        #     print(f" - {set}")
+
+        # if len(datasets) == 0:
+        #     raise Exception(f"No datasets found in directory: {directory}")
+        first = sorted(datasets, reverse=True)[0]
+        latest = first.ds_time
+        print(f"Found latest dataset: {first}")
 
         cached = cls.cached_latest
         valid = cached and \
@@ -269,7 +278,7 @@ class Dataset(object):
         self.ds_time = ds_time
         self.new = new
 
-        self.fn = self.filename(self.ds_time, directory=self.directory)
+        self.fn = self.filename(self.ds_time, directory=self.directory, suffix='.tawhiri')
 
         prot = mmap.PROT_READ
         flags = mmap.MAP_SHARED
@@ -285,18 +294,55 @@ class Dataset(object):
         logger.info("Opening dataset %s %s (%s)", self.ds_time, self.fn, msg)
 
         with open(self.fn, mode) as f:
-            if new:
-                f.seek(self.size - 1)
-                f.write(b"\0")
-            else:
-                f.seek(0, 2)
-                sz = f.tell()
-                if sz != self.size:
-                    raise ValueError("Dataset should be {0} bytes (was {1})"
-                                        .format(self.size, sz))
+            # if new:
+            #     f.seek(self.size - 1)
+            #     f.write(b"\0")
+            # else:
+            #     f.seek(0, 2)
+            #     sz = f.tell()
+            #     if sz != self.size:
+            #         raise ValueError("Dataset should be {0} bytes (was {1})"
+            #                             .format(self.size, sz))
             f.seek(0, 0)
 
+            # Read header
+            (self.header, data_pos) = self.parse_header(f)
+
+            print(f"Opened dataset: {json.dumps(self.header)} [{data_pos}]")
+
             self.array = mmap.mmap(f.fileno(), 0, prot=prot, flags=flags)
+
+    @classmethod
+    def parse_header(cls, f):
+        # Read file in chunks until we find a NUL character
+        chunk_size = 4096  # Reasonable buffer size
+        json_bytes = bytearray()
+        
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:  # End of file
+                raise ValueError("No NUL terminator found in file")
+            
+            # Look for NUL in this chunk
+            nul_index = chunk.find(b'\0')
+            if nul_index != -1:
+                # Found the terminator - add the bytes up to (but not including) NUL
+                json_bytes.extend(chunk[:nul_index])
+                # Calculate where the binary data starts (current position - remaining chunk + nul_index + 1)
+                binary_start = f.tell() - len(chunk) + nul_index + 1
+                break
+            
+            json_bytes.extend(chunk)
+        
+        # Parse the JSON data
+        try:
+            json_str = json_bytes.decode('utf-8')
+            json_obj = json.loads(json_str)
+            return json_obj, binary_start
+        except UnicodeDecodeError as e:
+            raise ValueError(f"Invalid UTF-8 in JSON header: {str(e)}")
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON header: {str(e)}")
 
     def __del__(self):
         self.close()
