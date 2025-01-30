@@ -140,12 +140,15 @@ def make_wind_velocity(dataset, warningcounts):
     def wind_velocity(t, lat, lng, alt):
         t -= dataset_epoch
 
+        windIsXY = False
+        
         if True: # MEPS
             # Reproject coordinates
             rlng,rlat = proj_MEPS.transform(lng, lat)
             ralt = alt # TODO: We need to add the ground level height to get the right altitude in MEPS
             if ralt < 0:
                 ralt = 0
+            windIsXY = True # MEPS has wind data in X/Y direction, not U/V
         else:
             rlat = lat
             rlng = lng
@@ -161,8 +164,12 @@ def make_wind_velocity(dataset, warningcounts):
         # return dlat, dlng, w
         
         # Use pyproj that will use the proper WGS84 ellipsoid
-        bearing_degrees, distance_meters = calculate_bearing_and_distance(v, u)
-        nlng, nlat, back_az = geodesic.fwd(lng, lat, bearing_degrees, distance_meters)
+        if windIsXY:
+            # Add wind and transform back to WGS84
+            nlng,nlat = proj_MEPS.transform(rlng + u, rlat + v, direction=pyproj.enums.TransformDirection.INVERSE)
+        else:
+            bearing_degrees, distance_meters = calculate_bearing_and_distance(v, u)
+            nlng, nlat, back_az = geodesic.fwd(lng, lat, bearing_degrees, distance_meters)
         
         dlng = nlng - lng
         dlat = nlat - lat
