@@ -55,6 +55,25 @@ cdef struct Lerp3:
     long hour, lat, lng
     double lerp
 
+cdef struct ModelShape:
+    # Hour parameters
+    int hourMin
+    int hourStep
+    int hourCount
+    
+    # Y parameters
+    double yMin
+    double yStep
+    int yCount
+    
+    # X parameters
+    double xMin
+    double xStep
+    int xCount
+    
+    # Levels
+    int levels
+
 
 class RangeError(ValueError):
     def __init__(self, variable, value):
@@ -101,13 +120,30 @@ def make_interpolator(dataset, WarningCounts warnings):
         else:
             vars[idx] = -1
 
+    # Create model struct
+    cdef ModelShape model_shape
+
+    model_shape.hourMin = dataset.header['shape']['hour']['min']
+    model_shape.hourStep = dataset.header['shape']['hour']['step']
+    model_shape.hourCount = dataset.header['shape']['hour']['count']
+    
+    model_shape.yMin = dataset.header['shape']['y']['min']
+    model_shape.yStep = dataset.header['shape']['y']['step']
+    model_shape.yCount = dataset.header['shape']['y']['count']
+    
+    model_shape.xMin = dataset.header['shape']['x']['min']
+    model_shape.xStep = dataset.header['shape']['x']['step']
+    model_shape.xCount = dataset.header['shape']['x']['count']
+    
+    model_shape.levels = dataset.header['shape']['levels']
+
     def f(hour, lat, lng, alt):
-        return get_wind(data, warnings, vars, hour, lat, lng, alt)
+        return get_wind(data, warnings, &model_shape, vars, hour, lat, lng, alt)
 
     return f
 
 
-cdef object get_wind(dataset ds, WarningCounts warnings, int[4] vars,
+cdef object get_wind(dataset ds, WarningCounts warnings, ModelShape* model_shape, int[4] vars,
                      double hour, double lat, double lng, double alt):
     """
     Return [u, v] wind components for the given position.
@@ -124,9 +160,9 @@ cdef object get_wind(dataset ds, WarningCounts warnings, int[4] vars,
     cdef long altidx
     cdef double lower, upper, u, v, w
 
-    pick3(ds, hour, lat, lng, lerps)
+    pick3(ds, model_shape, hour, lat, lng, lerps)
 
-    altidx = search(ds, lerps, alt)
+    altidx = search(ds, model_shape, lerps, alt)
     lower = interp3(ds, lerps, vars[VAR_A], altidx)
     upper = interp3(ds, lerps, vars[VAR_A], altidx + 1)
 
@@ -168,7 +204,7 @@ cdef long pick(double left, double step, long n, double value,
     out[1] = Lerp1(b + 1, l)
     return 0
 
-cdef long pick3(dataset ds, double hour, double lat, double lng, Lerp3[8] out) except -1:
+cdef long pick3(dataset ds, ModelShape* model_shape, double hour, double lat, double lng, Lerp3[8] out) except -1:
     cdef Lerp1[2] lhour, llat, llng
 
     print(f"pick3: {hour}, {lat}, {lng}")
@@ -186,8 +222,7 @@ cdef long pick3(dataset ds, double hour, double lat, double lng, Lerp3[8] out) e
     # MEPS
     #pick(0, 1, 4, hour, "hour", lhour)
     # Header
-    # TODO: ds is actually the float array – We should make a struct or something instead?
-    pick(ds.header['shape']['hour']['min'], ds.header['shape']['hour']['step'], ds.header['shape']['hour']['count'], hour, "hour", lhour)
+    pick(model_shape.hourMin, model_shape.hourStep, model_shape.hourCount, hour, "hour", lhour)
     
     #pick(-90, 0.25, 721, lat, "lat", llat)
     #pick(-180, 0.25, 1440 + 1, lng, "lng", llng)
@@ -197,8 +232,8 @@ cdef long pick3(dataset ds, double hour, double lat, double lng, Lerp3[8] out) e
     #    llng[1].index = 0
     # TODO: Fix for GFS wraparound
 
-    pick(ds.header['shape']['y']['min'], ds.header['shape']['y']['step'], ds.header['shape']['y']['count'], lat, "lat", llat)
-    pick(ds.header['shape']['x']['min'], ds.header['shape']['x']['step'], ds.header['shape']['x']['count'], lng, "lng", llng)
+    pick(model_shape.yMin, model_shape.yStep, model_shape.yCount, lat, "lat", llat)
+    pick(model_shape.xMin, model_shape.xStep, model_shape.xCount, lng, "lng", llng)
 
     cdef long i = 0
 
@@ -224,7 +259,7 @@ cdef double interp3(dataset ds, Lerp3[8] lerps, long variable, long level):
     return r
 
 # Searches for the largest index lower than target, excluding the topmost level.
-cdef long search(dataset ds, Lerp3[8] lerps, double target):
+cdef long search(dataset ds, ModelShape* model_shape, Lerp3[8] lerps, double target):
     cdef long lower, upper, mid
     cdef double test
     
@@ -235,7 +270,7 @@ cdef long search(dataset ds, Lerp3[8] lerps, double target):
     # MEPS
     lower, upper = 0, 63
     # Header
-    lower, upper = 0, (ds.header['shape']['levels'] - 2)
+    lower, upper = 0, (model_shape.levels - 2)
 
     while lower < upper:
         mid = (lower + upper + 1) / 2
