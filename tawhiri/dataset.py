@@ -260,6 +260,9 @@ class Dataset(object):
 
             return ds
 
+    header = None
+    header_size = 0
+
     def __init__(self, ds_time, directory=DEFAULT_DIRECTORY, new=False):
         """
         Open the dataset file for `ds_time`, in `directory`
@@ -306,10 +309,11 @@ class Dataset(object):
             f.seek(0, 0)
 
             # Read header
-            (self.header, data_pos) = self.parse_header(f)
+            (self.header, self.header_size) = self.parse_header(f)
 
-            print(f"Opened dataset: {json.dumps(self.header)} [{data_pos}]")
+            print(f"Opened dataset: {json.dumps(self.header)} [{self.header_size}]")
 
+            # We could offset the header here, but macOS doesn't seem to support that, so we do the offset later in MagicMemoryView instead
             self.array = mmap.mmap(f.fileno(), 0, prot=prot, flags=flags)
 
     @classmethod
