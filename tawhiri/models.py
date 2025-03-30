@@ -159,11 +159,21 @@ def make_wind_velocity(dataset, warningcounts):
             rlng = lng
             ralt = alt
 
-        u, v, w = get_wind(t / 3600.0, rlat, rlng, ralt)
-
-        print(f"Wind at {lat},{lng} ({rlat},{rlng}) @ {alt} = {u},{v},{w}")
+        continuePredictionOnWindException = False # TODO: Make configurable?
+        try:
+            u, v, w = get_wind(t / 3600.0, rlat, rlng, ralt)
+        except Exception as e:
+             if not continuePredictionOnWindException:
+                 raise e
+             
+             print(f"Ignoring wind exception: {e}")
+             u,v,w = 0,0,0
         
+        #print(f"Wind at {lat},{lng} ({rlat},{rlng}) @ {alt} = {u},{v},{w}")
+        
+
         # R = 6371009 + alt # What if we use WGS84? 6378137
+        # R = 6371229 # This is what I saw GFS use in the GRIB files?
         # dlat = _180_PI * v / R
         # dlng = _180_PI * u / (R * math.cos(lat * _PI_180))
         # return dlat, dlng, w
