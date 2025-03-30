@@ -346,7 +346,7 @@ def run_prediction(req):
         else:
             result = solver.solve(req['launch_datetime'], req['launch_latitude'],
                                 req['launch_longitude'], req['launch_altitude'],
-                                stages, dt=15.0)
+                                stages, dt=60.0)
 
     except Exception as e:
         raise PredictionException("Prediction did not complete: '%s'." %
