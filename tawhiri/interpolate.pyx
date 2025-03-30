@@ -175,6 +175,8 @@ cdef object get_wind(dataset ds, WarningCounts warnings, ModelShape* model_shape
     else:
         lerp = 0.5
 
+    print(f"Final altitude idx {altidx}: lower {lower}, upper {upper}, lerp = {lerp}")
+
     if lerp < 0: warnings.altitude_too_high += 1
 
     cdef Lerp1 alt_lerp = Lerp1(altidx, lerp)
@@ -196,12 +198,12 @@ cdef long pick(double left, double step, long n, double value,
     a = (value - left) / step
     b = <long> a
     if b < 0 or b >= n - 1:
-        if variable_name == "hour":
-            out[0] = Lerp1(0, 0)
-            out[1] = Lerp1(0, 0)
-            return 0
-        else:
-            raise RangeError(variable_name, value)
+        #if variable_name == "hour":
+        #    out[0] = Lerp1(0, 0)
+        #    out[1] = Lerp1(0, 0)
+        #    return 0
+        #else:
+        raise RangeError("Can't pick variable: {}".format(variable_name), value)
     l = a - b
 
     out[0] = Lerp1(b, 1 - l)
@@ -257,7 +259,7 @@ cdef double interp3(dataset ds, Lerp3[8] lerps, long variable, long level):
     for i in range(8):
         lerp = lerps[i]
         v = ds[lerp.hour, level, variable, lerp.lat, lerp.lng]
-        #print(f"{lerp.hour},{level},{variable},{lerp.lat},{lerp.lng} = {v}")
+        #print(f"  {lerp.hour}h, {level}mp, {variable}, ({lerp.lat},{lerp.lng}) [{lerp.hour},{level},{variable},{lerp.lat},{lerp.lng}] = {v} m[/s] (x{lerp.lerp})")
         r += v * lerp.lerp
 
     return r
