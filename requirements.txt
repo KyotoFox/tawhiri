@@ -21,7 +21,7 @@ markupsafe==2.0.1
 #-e .
 
 # Our dependencies
-#magicmemoryview
+magicmemoryview==0.1.6
 #ruaumoko
 Flask-Script
 strict-rfc3339

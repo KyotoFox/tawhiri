@@ -36,7 +36,7 @@ WORKDIR /root/tawhiri
 
 # Install ourselves
 RUN pip3 install --user --no-warn-script-location --break-system-packages -e .
-#RUN pip3 install --user --no-warn-script-location --break-system-packages magicmemoryview
+#RUN pip3 install --user --no-warn-script-location --break-system-packages ./magicmemoryview --force-reinstall
 
 RUN cd /root/tawhiri && \
   python3 setup.py build_ext --inplace
