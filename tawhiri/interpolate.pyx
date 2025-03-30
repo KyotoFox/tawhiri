@@ -104,12 +104,16 @@ def make_interpolator(dataset, WarningCounts warnings):
     # MEPS
     #data = MagicMemoryView(dataset.array, (4, 65, 4, 88, 28), b"f")
     # Header
-    data = MagicMemoryView(dataset.array, (
-        dataset.header['shape']['hour']['count'], 
-        dataset.header['shape']['levels'], 
-        len(dataset.header['shape']['variables']), 
-        dataset.header['shape']['x']['count'], 
-        dataset.header['shape']['y']['count']), b"f")
+    data = MagicMemoryView(dataset.array,
+        (
+            dataset.header['shape']['hour']['count'], 
+            dataset.header['shape']['levels'], 
+            len(dataset.header['shape']['variables']), 
+            dataset.header['shape']['y']['count'], 
+            dataset.header['shape']['x']['count']
+        ), 
+        b"f", 
+        dataset.header_size)
 
     # Grab indexes of variables
     supported_vars = ['A', 'U', 'V', 'W'] # Matching VAR_A, VAR_U, ...
