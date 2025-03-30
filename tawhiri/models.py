@@ -142,14 +142,19 @@ def make_wind_velocity(dataset, warningcounts):
 
         windIsXY = False
         
-        if True: # MEPS
+        if dataset.header['crs'] == 'meps':
+            #print(f"Using MEPS CRS")
             # Reproject coordinates
             rlng,rlat = proj_MEPS.transform(lng, lat)
-            ralt = alt # TODO: We need to add the ground level height to get the right altitude in MEPS
+            
+            # TODO: We need to add the ground level height to get the right altitude in MEPS
+            ralt = alt
             if ralt < 0:
                 ralt = 0
+            
             windIsXY = True # MEPS has wind data in X/Y direction, not U/V
         else:
+            #print(f"Using WGS84 CRS")
             rlat = lat
             rlng = lng
             ralt = alt
