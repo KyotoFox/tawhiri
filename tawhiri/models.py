@@ -244,8 +244,11 @@ def make_elevation_data_termination(dataset=None):
        in `dataset` (which should be a ruaumoko.Dataset).
     """
     def tc(t, lat, lng, alt):
-        return (alt <= 0)
-        #return (dataset.get(lat, lng) > alt) or (alt <= 0)
+        # Don't bother querying ruaumoko at high altitudes
+        if alt > 10000:
+            return False
+        #return (alt <= 0) # Ignore dataset
+        return (dataset.get(lat, lng) > alt) or (alt <= 0)
     return tc
 
 def make_time_termination(max_time):

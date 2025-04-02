@@ -45,7 +45,6 @@ STANDARD_FORMAT = "json"
 
 # Util functions ##############################################################
 def ruaumoko_ds():
-    return None
     if not hasattr("ruaumoko_ds", "once"):
         ds_loc = app.config.get('ELEVATION_DATASET', ElevationDataset.default_location)
         ruaumoko_ds.once = ElevationDataset(ds_loc)
@@ -346,7 +345,7 @@ def run_prediction(req):
         else:
             result = solver.solve(req['launch_datetime'], req['launch_latitude'],
                                 req['launch_longitude'], req['launch_altitude'],
-                                stages, dt=60.0)
+                                stages, dt=15.0)
 
     except Exception as e:
         raise PredictionException("Prediction did not complete: '%s'." %
