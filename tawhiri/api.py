@@ -301,7 +301,7 @@ def run_prediction(req):
     # Dataset
     try:
         if req['dataset'] == LATEST_DATASET_KEYWORD:
-            tawhiri_ds = WindDataset.open_latest(persistent=True, directory=ds_dir)
+            tawhiri_ds = WindDataset.open_latest(persistent=True, directory=ds_dir, not_after=req['launch_datetime'])
         else:
             tawhiri_ds = WindDataset(datetime.fromtimestamp(req['dataset']), directory=ds_dir)
     except IOError:

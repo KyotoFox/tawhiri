@@ -216,7 +216,7 @@ class Dataset(object):
         cls.cached_latest = None
 
     @classmethod
-    def open_latest(cls, directory=DEFAULT_DIRECTORY, persistent=False):
+    def open_latest(cls, directory=DEFAULT_DIRECTORY, persistent=False, not_after=None):
         """
         Find the most recent datset in `directory`, and open it
 
@@ -224,16 +224,23 @@ class Dataset(object):
         :param directory: directory to search
         :type persistent: bool
         :param persistent: should the latest dataset be cached, and re-used?
+        :type not_before: int
+        :param not_before: if specified, only return datasets with ds_time not before this Unix timestamp
         :rtype: :class:`Dataset`
         """
 
         datasets = Dataset.listdir(directory, only_suffices=('.tawhiri', ))
-        # print("Found datasets:")
-        # for set in datasets:
-        #     print(f" - {set}")
-
-        # if len(datasets) == 0:
-        #     raise Exception(f"No datasets found in directory: {directory}")
+        
+        # Filter datasets based on not_before if specified
+        if not_after is not None:
+            not_after_dt = datetime.fromtimestamp(not_after)
+            datasets = [d for d in datasets if d.ds_time < not_after_dt]
+            if not datasets:
+                raise ValueError(f"No datasets found before {not_after_dt} in directory: {directory}")
+        else:
+            if len(datasets) == 0:
+                raise Exception(f"No datasets found in directory: {directory}")
+            
         first = sorted(datasets, reverse=True)[0]
         latest = first.ds_time
         print(f"Found latest dataset: {first}")
