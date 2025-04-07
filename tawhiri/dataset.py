@@ -35,7 +35,7 @@ import os
 import os.path
 import signal
 import operator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import json
 from pathlib import Path
@@ -161,6 +161,8 @@ class Dataset(object):
     #: The default location of wind data
     DEFAULT_DIRECTORY = '/srv/tawhiri-datasets'
 
+    cached_latest = None
+
     # prune_latest is registered as the signal handler for SIGALRM at the
     # bottom of the file.
     @classmethod
@@ -169,30 +171,30 @@ class Dataset(object):
 
     @classmethod
     def _parse_filename(cls, filename):
-        """Parse a dataset filename to extract generation time and validity period."""
+        """Parse a dataset filename to extract validity period."""
         try:
             # Format: YYYY-MM-DDTHH-YYYY-MM-DDTHH.tawhiri
             parts = filename.split('-')
             if len(parts) != 6 or not filename.endswith('.tawhiri'):
                 return None
             
-            gen_time = datetime(
+            valid_from = datetime(
                 int(parts[0]),  # year
                 int(parts[1]),  # month
                 int(parts[2][:2]),  # day
                 int(parts[2][3:5]),  # hour
+                tzinfo=timezone.utc
             )
             
-            valid_from = datetime(
+            valid_to = datetime(
                 int(parts[3]),  # year
                 int(parts[4]),  # month
                 int(parts[5][:2]),  # day
                 int(parts[5][3:5]),  # hour
+                tzinfo=timezone.utc
             )
             
-            valid_to = valid_from + timedelta(hours=4)  # Assuming 4-hour validity
-            
-            return gen_time, valid_from, valid_to
+            return valid_from, valid_to
         except (ValueError, IndexError):
             return None
 
@@ -200,45 +202,68 @@ class Dataset(object):
     def _find_latest_dataset(cls, directory, not_after=None, max_days_back=14):
         """Find the latest dataset in the directory structure."""
         if not_after is None:
-            not_after = datetime.utcnow()
+            not_after = datetime.now(timezone.utc)
         
         print(f"Finding latest dataset in {directory} after {not_after}")
 
-        # Start from the current date and go backwards
+        # Start from the current date and go backwards by days
         current_date = not_after
         for _ in range(max_days_back):
             # Try to find a dataset in the current date's directory
-            date_dir = current_date.strftime("%Y/%m/%d/%HZ")
+            date_dir = current_date.strftime("%Y/%m/%d")
             full_dir = os.path.join(directory, date_dir)
             
-            print(f"Checking {full_dir}")
             if os.path.exists(full_dir):
                 # Look for the latest dataset in this directory
                 latest_dataset = None
                 latest_gen_time = None
                 
-                for filename in os.listdir(full_dir):
-                    print(f"Checking {filename}")
-                    if not filename.endswith('.tawhiri'):
+                # Check each hour directory in the current day
+                for hour_dir in sorted(os.listdir(full_dir), reverse=True):
+                    if not hour_dir.endswith('Z'):
                         continue
                         
-                    result = cls._parse_filename(filename)
-                    if result is None:
+                    hour_path = os.path.join(full_dir, hour_dir)
+                    if not os.path.isdir(hour_path):
                         continue
                         
-                    gen_time, valid_from, valid_to = result
-                    
-                    # Check if this dataset is valid for our time
-                    if valid_from <= not_after <= valid_to:
-                        if latest_gen_time is None or gen_time > latest_gen_time:
-                            latest_gen_time = gen_time
-                            latest_dataset = (os.path.join(full_dir, filename), gen_time, valid_from, valid_to)
+                    # Parse generation time from directory path
+                    try:
+                        gen_time = datetime(
+                            int(date_dir.split('/')[0]),  # year
+                            int(date_dir.split('/')[1]),  # month
+                            int(date_dir.split('/')[2]),  # day
+                            int(hour_dir[:-1]),  # hour (remove 'Z')
+                            tzinfo=timezone.utc
+                        )
+                    except (ValueError, IndexError):
+                        continue
+                        
+                    print(f"Dir {hour_path}")
+                    for filename in sorted(os.listdir(hour_path), reverse=True):
+                        print(f"Checking {filename}")
+                        if not filename.endswith('.tawhiri'):
+                            continue
+                            
+                        result = cls._parse_filename(filename)
+                        if result is None:
+                            continue
+                            
+                        valid_from, valid_to = result
+                        print(f"gen_time: {gen_time}, valid_from: {valid_from}, valid_to: {valid_to}")
+                        # Check if this dataset is valid for our time
+                        if valid_from <= not_after:
+                            if latest_gen_time is None or gen_time > latest_gen_time:
+                                latest_gen_time = gen_time
+                                latest_dataset = (os.path.join(hour_path, filename), gen_time, valid_from, valid_to)
+                                print("=> Possible!")
                 
                 if latest_dataset is not None:
+                    print(f"Latest dataset: {latest_dataset}")
                     return latest_dataset
             
-            # Move back one hour
-            current_date -= timedelta(hours=1)
+            # Move back one day
+            current_date -= timedelta(days=1)
         
         return None
 
@@ -289,11 +314,24 @@ class Dataset(object):
         :type path: string
         :param path: full path to the dataset file
         """
+        # Parse generation time from directory path
+        dir_parts = path.split('/')
+        try:
+            gen_time = datetime(
+                int(dir_parts[-4]),  # year
+                int(dir_parts[-3]),  # month
+                int(dir_parts[-2]),  # day
+                int(dir_parts[-1][:-1]),  # hour (remove 'Z')
+                tzinfo=timezone.utc
+            )
+        except (ValueError, IndexError):
+            raise ValueError(f"Invalid dataset path structure: {path}")
+
         result = self._parse_filename(os.path.basename(path))
         if result is None:
             raise ValueError(f"Invalid dataset filename: {path}")
             
-        gen_time, valid_from, valid_to = result
+        valid_from, valid_to = result
 
         self.directory = os.path.dirname(path)
         self.ds_time = gen_time
