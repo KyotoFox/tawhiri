@@ -20,7 +20,7 @@ Provide the HTTP API for Tawhiri.
 """
 
 from flask import Flask, jsonify, request, g, send_file
-from datetime import datetime
+from datetime import datetime, timezone
 import time
 import strict_rfc3339
 from io import BytesIO
@@ -301,9 +301,10 @@ def run_prediction(req):
     # Dataset
     try:
         if req['dataset'] == LATEST_DATASET_KEYWORD:
-            tawhiri_ds = WindDataset.open_latest(persistent=True, directory=ds_dir, not_after=req['launch_datetime'])
+            launch_datetime = datetime.fromtimestamp(req['launch_datetime'], tz=timezone.utc)
+            tawhiri_ds = WindDataset.open_latest(persistent=True, directory=ds_dir, not_after=launch_datetime)
         else:
-            tawhiri_ds = WindDataset(datetime.fromtimestamp(req['dataset']), directory=ds_dir)
+            tawhiri_ds = WindDataset(req['dataset'], directory=ds_dir)
     except IOError:
         raise InvalidDatasetException("No matching dataset found.")
     except ValueError as e:
