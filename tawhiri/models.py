@@ -115,7 +115,7 @@ def calculate_bearing_and_distance(north_meters, east_meters):
 
 def get_wind_direct(dataset, warningcounts, t, lat, lng, alt):
     get_wind = interpolate.make_interpolator(dataset, warningcounts)
-    dataset_epoch = calendar.timegm(dataset.ds_time.timetuple())
+    dataset_epoch = calendar.timegm(dataset.valid_from.timetuple())
 
     t -= dataset_epoch
 
@@ -136,7 +136,7 @@ def make_wind_velocity(dataset, warningcounts):
        altitude. The `dataset` argument is the wind dataset in use.
     """
     get_wind = interpolate.make_interpolator(dataset, warningcounts)
-    dataset_epoch = calendar.timegm(dataset.ds_time.timetuple())
+    dataset_epoch = calendar.timegm(dataset.valid_from.timetuple())
     def wind_velocity(t, lat, lng, alt):
         t -= dataset_epoch
 
@@ -202,7 +202,7 @@ def make_reverse_wind_velocity(dataset, warningcounts):
        This allows working estimation of a radiosonde's launch site.
     """
     get_wind = interpolate.make_interpolator(dataset, warningcounts)
-    dataset_epoch = calendar.timegm(dataset.ds_time.timetuple())
+    dataset_epoch = calendar.timegm(dataset.valid_from.timetuple())
     def wind_velocity(t, lat, lng, alt):
         t -= dataset_epoch
         u, v = get_wind(t / 3600.0, lat, lng, alt)

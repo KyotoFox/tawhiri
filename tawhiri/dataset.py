@@ -318,10 +318,10 @@ class Dataset(object):
         dir_parts = path.split('/')
         try:
             gen_time = datetime(
-                int(dir_parts[-4]),  # year
-                int(dir_parts[-3]),  # month
-                int(dir_parts[-2]),  # day
-                int(dir_parts[-1][:-1]),  # hour (remove 'Z')
+                int(dir_parts[-5]),  # year
+                int(dir_parts[-4]),  # month
+                int(dir_parts[-3]),  # day
+                int(dir_parts[-2][:-1]),  # hour (remove 'Z')
                 tzinfo=timezone.utc
             )
         except (ValueError, IndexError):
