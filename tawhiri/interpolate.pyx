@@ -107,7 +107,7 @@ def make_interpolator(dataset, WarningCounts warnings):
     data = MagicMemoryView(dataset.array,
         (
             dataset.header['shape']['hour']['count'], 
-            dataset.header['shape']['levels'], 
+            len(dataset.header['shape']['levels']), 
             len(dataset.header['shape']['variables']), 
             dataset.header['shape']['y']['count'], 
             dataset.header['shape']['x']['count']
@@ -139,7 +139,7 @@ def make_interpolator(dataset, WarningCounts warnings):
     model_shape.xStep = dataset.header['shape']['x']['step']
     model_shape.xCount = dataset.header['shape']['x']['count']
     
-    model_shape.levels = dataset.header['shape']['levels']
+    model_shape.levels = len(dataset.header['shape']['levels'])
 
     def f(hour, lat, lng, alt):
         return get_wind(data, warnings, &model_shape, vars, hour, lat, lng, alt)
